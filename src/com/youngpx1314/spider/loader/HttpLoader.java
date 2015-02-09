@@ -1,6 +1,10 @@
 package com.youngpx1314.spider.loader;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -24,18 +28,20 @@ public class HttpLoader {
 
 	public String load() {
 		BufferedInputStream bis = null;
+		BufferedOutputStream bos = null;
 		HttpURLConnection connection = null;
-		StringBuilder str = new StringBuilder();
 		try {
 			URL url = new URL(this.httpPath);
 			connection = (HttpURLConnection) url.openConnection();
 			connection.connect();
 			bis = new BufferedInputStream(url.openStream());
+			bos = new BufferedOutputStream(this.getFile(url));
 			byte[] bytearray = new byte[1024];
 			int num = 0;
 			while ((num = bis.read(bytearray)) != -1) {
-				str.append(new String(bytearray));
+				bos.write(bytearray, 0, num);
 			}
+			return this.getFilePath(url);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return "";
@@ -47,11 +53,44 @@ public class HttpLoader {
 					e.printStackTrace();
 				}
 			}
+			if(bos!=null){
+				try {
+					bos.flush();
+					bos.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 			if (connection != null)
 				connection.disconnect();
 		}
-		return str.toString();
 	}
+	private FileOutputStream getFile(URL url){
+		File file = new File(this.getFilePath(url));
+		if(file.exists())
+			file.delete();
+		try {
+			File parent = file.getParentFile();
+			if(parent!=null&&!parent.exists()){
+				parent.mkdir();
+			}
+			file.createNewFile();
+			return new FileOutputStream(file);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+			
+		
+	}
+	private String getFilePath(URL url){
+		StringBuilder filePath = new StringBuilder();
+		filePath.append("F:\\").append(url.getProtocol()).append("\\")
+		.append(url.getHost()).append("\\").append(url.getPort())
+		.append("\\").append(url.getPath());
+		return filePath.toString();
+	}
+	
 	public void startAnalyse(final String str) {
 		List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
 		tasks.add(new Callable<Integer>() {
