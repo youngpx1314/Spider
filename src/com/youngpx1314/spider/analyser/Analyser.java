@@ -7,6 +7,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
@@ -21,6 +22,9 @@ import org.htmlparser.filters.TagNameFilter;
 import org.htmlparser.tags.LinkTag;
 import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
+
+import com.youngpx1314.spider.loader.HttpLoader;
+import com.youngpx1314.spider.pool.ServicePool;
 /**
  * @author youngpx1314
  *
@@ -43,7 +47,7 @@ public class Analyser {
 					LinkTag node = (LinkTag) nodeList.elementAt(i);
 					String link = node.getAttribute("href");
 					if(link!=null&&link.trim().length()>0){
-						System.out.println(link);
+//						System.out.println(link);
 						list.add(link);
 					}
 				}
@@ -54,5 +58,22 @@ public class Analyser {
 		return list;
 	}
 	public void startLoader(final List<String> https) {
+		List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
+		for(int i=0;i<https.size();i++){
+			final String http = https.get(i);
+			tasks.add(new Callable<Integer>() {
+				@Override
+				public Integer call() throws Exception {
+					HttpLoader loader = new HttpLoader(http);
+					loader.startAnalyse(loader.load());
+					return null;
+				}
+			});
+		}
+		try {
+			ServicePool.getExecutorService().invokeAll(tasks);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }
